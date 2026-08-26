@@ -1,15 +1,4 @@
-/**
- * Anu apology website response collector.
- *
- * 1. Create a Google Sheet.
- * 2. Extensions -> Apps Script.
- * 3. Replace the default code with this file.
- * 4. Deploy as a Web app:
- *      Execute as: Me
- *      Who has access: Anyone
- * 5. Copy the Web app URL into index.html as RESPONSE_ENDPOINT.
- */
-
+const SPREADSHEET_ID = '1LyOmp2J7-DqBC283R8cudrp0EwWHWo9rToMu48z_0NM';
 const SHEET_NAME = 'Responses';
 
 function doGet() {
@@ -20,33 +9,43 @@ function doGet() {
 
 function doPost(e) {
   try {
-    const body = e && e.postData && e.postData.contents
-      ? JSON.parse(e.postData.contents)
-      : {};
+
+    if (!e || !e.postData || !e.postData.contents) {
+      throw new Error('No POST data received');
+    }
+
+    const body = JSON.parse(e.postData.contents);
 
     const choice = String(body.choice || '').trim();
     const message = String(body.message || '').trim();
     const page = String(body.page || '').trim();
     const submittedAt = String(body.submittedAt || '').trim();
 
-    // Only accept the two choices used by the website.
     if (choice !== 'yes' && choice !== 'time') {
-      return jsonResponse({ ok: false, error: 'Invalid choice' });
+      throw new Error('Invalid choice: ' + choice);
     }
 
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let sheet = ss.getSheetByName(SHEET_NAME);
+    const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+    let sheet = spreadsheet.getSheetByName(SHEET_NAME);
 
     if (!sheet) {
-      sheet = ss.insertSheet(SHEET_NAME);
+      sheet = spreadsheet.insertSheet(SHEET_NAME);
     }
 
     if (sheet.getLastRow() === 0) {
-      sheet.appendRow(['Timestamp', 'Answer', 'Message', 'Page', 'Client submitted time']);
-      sheet.setFrozenRows(1);
+      sheet.appendRow([
+        'Timestamp',
+        'Answer',
+        'Message',
+        'Page',
+        'Client submitted time'
+      ]);
     }
 
-    const answer = choice === 'yes' ? 'Yes ❤️' : 'I need time';
+    const answer = choice === 'yes'
+      ? 'Yes ❤️'
+      : 'I need time';
 
     sheet.appendRow([
       new Date(),
@@ -56,15 +55,51 @@ function doPost(e) {
       submittedAt
     ]);
 
-    return jsonResponse({ ok: true });
-  } catch (err) {
-    console.error(err);
-    return jsonResponse({ ok: false, error: String(err) });
+    SpreadsheetApp.flush();
+
+    return jsonResponse({
+      ok: true,
+      answer: answer
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    return jsonResponse({
+      ok: false,
+      error: String(error)
+    });
   }
 }
+
 
 function jsonResponse(data) {
   return ContentService
     .createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+
+function testResponse() {
+
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+  let sheet = spreadsheet.getSheetByName(SHEET_NAME);
+
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(SHEET_NAME);
+  }
+
+  sheet.appendRow([
+    new Date(),
+    'TEST ❤️',
+    'TEST RESPONSE FROM APPS SCRIPT',
+    'TEST',
+    new Date().toISOString()
+  ]);
+
+  SpreadsheetApp.flush();
+
+  console.log('TEST ROW WRITTEN SUCCESSFULLY');
 }
