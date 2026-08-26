@@ -145,6 +145,23 @@
   document.getElementById('closeLight').addEventListener('click',closeLight);document.getElementById('lightbox').addEventListener('click',e=>{if(e.target.id==='lightbox')closeLight()});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeLight();drawer.classList.add('hidden')}if(e.key==='ArrowRight'&&app.classList.contains('hidden')===false)next();if(e.key==='ArrowLeft'&&app.classList.contains('hidden')===false)prev()});
 })();
+  function testResponse() {
+  const fakeEvent = {
+    postData: {
+      contents: JSON.stringify({
+        choice: 'yes',
+        message: 'TEST RESPONSE ❤️',
+        page: 'TEST',
+        submittedAt: new Date().toISOString()
+      }
+    }
+  };
+
+  const result = doPost(fakeEvent);
+
+  console.log(result.getContent());
+}
 </script>
 </body>
 </html>
+
