@@ -51,6 +51,8 @@
     haathon:{name:'Haathon Ko Tere — Meherbaan',file:'assets/audio/02-haathon-ko-tere.mp3'},
     nahin:{name:'Nahin Milta — Bayaan',file:'assets/audio/03-nahin-milta.mp3'}
   };
+  // Paste your Google Apps Script Web App URL between the quotes after deployment.
+  const RESPONSE_ENDPOINT='PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE';
   const resultKey='anu_apology_result';
   const messageKey='anu_apology_message';
   let step=0,currentTrack='theme',noCount=0;
@@ -62,18 +64,42 @@
     try{localStorage.setItem(resultKey,choice);localStorage.setItem(messageKey,message);}catch(e){}
     if(window.opener){window.opener.postMessage({type:'anu_apology_result',choice,message},'*');}
   }
-  function finishResponse(choice){
+  async function sendResponseToGoogle(choice,message){
+    if(!RESPONSE_ENDPOINT || RESPONSE_ENDPOINT.includes('PASTE_YOUR_')) return false;
+    try{
+      await fetch(RESPONSE_ENDPOINT,{
+        method:'POST',
+        mode:'no-cors',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({
+          choice:choice,
+          message:message,
+          page:window.location.href,
+          submittedAt:new Date().toISOString()
+        }),
+        keepalive:true
+      });
+      return true;
+    }catch(e){
+      return false;
+    }
+  }
+  async function finishResponse(choice){
     const message = choice==='yes'
       ? 'Thank you. I won’t waste this chance. ❤️'
       : 'I understand. Take the time you need. I won’t pressure you. ❤️';
     saveResult(choice,message);
     const answer=document.getElementById('answer');
     if(answer) answer.textContent = message;
+    if(answer) answer.insertAdjacentHTML('afterend','<div class="answer" id="sendStatus">Saving your response…</div>');
+    const sent=await sendResponseToGoogle(choice,message);
+    const status=document.getElementById('sendStatus');
+    if(status) status.textContent=sent ? 'Your response has been recorded. ❤️' : 'Your response is saved. ❤️';
     setTimeout(()=>{
-      document.body.innerHTML = '<div class="closing-screen"><div><h2>Thank you.</h2><p><strong>Result saved.</strong> Your response was recorded locally in the browser. You can check it with localStorage keys <strong>anu_apology_result</strong> and <strong>anu_apology_message</strong>.</p></div></div>';
+      document.body.innerHTML = '<div class="closing-screen"><div><h2>Thank you.</h2><p><strong>Your response was recorded. ❤️</strong></p></div></div>';
       try{window.close();}catch(e){}
       try{window.location.href='about:blank';}catch(e){}
-    },2000);
+    },1800);
   }
   function setTrack(id,autoplay){
     const t=tracks[id]; currentTrack=id; trackName.textContent=t.name; audio.src=t.file; audio.load();
